@@ -1,0 +1,21 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: rota-economica-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: rota_economica
+      POSTGRES_USER: rota
+      POSTGRES_PASSWORD: rota
+    ports:
+      - "5432:5432"
+    volumes:
+      - rota-economica-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rota -d rota_economica"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  rota-economica-data:

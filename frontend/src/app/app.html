@@ -1,0 +1,532 @@
+<div class="app-shell">
+  <aside class="sidebar" aria-label="Navegação do aplicativo">
+    <a class="brand" href="#inicio" aria-label="Rota Econômica, início" (click)="setSection('Visao geral')">
+      <span class="brand-mark">R</span>
+      <span class="brand-copy"><strong>rota</strong><small>ECONÔMICA</small></span>
+    </a>
+    <div class="nav-caption">SEU TRABALHO</div>
+    <nav class="nav-list" aria-label="Navegação principal">
+      @for (section of sections; track section) {
+      <button class="nav-item" [class.active]="activeSection === section" (click)="setSection(section)">
+        <span class="nav-symbol" aria-hidden="true">{{ section === 'Visao geral' ? '⌂' : section === 'Abastecimentos' ?
+          '◉' : section === 'Comparador' ? '⇄' : section === 'Financeiro' ? 'R$' : section === 'Manutencao' ? '⚙' :
+          section === 'Relatorios' ? '▥' : '⌖' }}</span>
+        <span>{{ labelFor(section) }}</span>
+        @if (section === 'Abastecimentos') { <span class="nav-count">{{ fillUps.length }}</span> }
+      </button>
+      }
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="vehicle-mini"><span class="vehicle-icon">▰</span><span><strong>Meu veículo</strong><small>Carro ·
+            flex</small></span><span class="chevron">⌄</span></div>
+      <div class="sync-note"><span class="sync-dot"></span>Salvo neste dispositivo</div>
+      <div class="user-profile"><span class="avatar">RM</span><span><strong>Rafael motorista</strong><small>Plano
+            gratuito</small></span><span class="more">···</span></div>
+    </div>
+  </aside>
+
+  <div class="workspace">
+    <header class="topbar">
+      <div class="crumb"><span>Rota Econômica</span><span class="crumb-sep">/</span><strong>{{ labelFor(activeSection)
+          }}</strong></div>
+      <div class="topbar-actions"><span class="today-label">{{ today | date:'EEEE, d MMM':'':'pt-BR' }}</span><button
+          class="icon-button" title="Notificações" aria-label="Notificações">♧</button><button
+          class="avatar avatar-small" title="Perfil Rafael motorista">RM</button></div>
+    </header>
+
+    @if (notice) { <output class="toast" aria-live="polite">{{ notice }}</output> }
+
+    <main class="page-content">
+      @if (activeSection === 'Visao geral') {
+      <section class="page-heading">
+        <div>
+          <div class="eyebrow">TERÇA-FEIRA, 13 DE OUTUBRO</div>
+          <h1>Bom dia, Rafael<span class="heading-period">.</span></h1>
+          <p>Veja como está o resultado do seu trabalho nesta semana.</p>
+        </div>
+        <button class="button button-primary" (click)="setSection('Abastecimentos')"><span class="button-plus">+</span>
+          Registrar abastecimento</button>
+      </section>
+
+      <section class="metric-grid" aria-label="Resumo financeiro">
+        <article class="metric-card metric-profit">
+          <div class="metric-top"><span>Lucro estimado</span><span class="metric-icon icon-green">↗</span></div>
+          <strong>{{ estimatedProfit | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Receitas menos despesas
+            registradas</small><span class="metric-foot">ATÉ AGORA</span>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>Ganhos registrados</span><span class="metric-icon icon-yellow">↑</span></div>
+          <strong>{{ totalIncome | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Em {{
+            ledger.filter(isIncome).length }} corridas e lançamentos</small><span class="metric-foot">RECEITAS</span>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>Gasto com combustível</span><span class="metric-icon icon-coral">⌁</span></div>
+          <strong>{{ fuelCostTotal | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>{{ fillUps.length }}
+            abastecimentos registrados</small><span class="metric-foot">NO PERÍODO</span>
+        </article>
+        <article class="metric-card">
+          <div class="metric-top"><span>Custo por quilômetro</span><span class="metric-icon icon-blue">↔</span></div>
+          <strong>{{ costPerKm ? (costPerKm | currency:'BRL':'symbol':'1.2-2':'pt-BR') : '—' }}</strong><small>{{
+            averageConsumption ? (averageConsumption | number:'1.1-1':'pt-BR') + ' km/l medidos' : 'Precisa de 2 tanques
+            cheios' }}</small><span class="metric-foot">SEU VEÍCULO</span>
+        </article>
+      </section>
+
+      <section class="overview-grid">
+        <article class="panel earnings-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">SEU RITMO</span>
+              <h2>Ganhos da semana</h2>
+            </div><button class="text-button" (click)="setSection('Relatorios')">Ver relatórios <span>↗</span></button>
+          </div>
+          <div class="chart-total">R$ 2.667,00 <span>últimos 7 dias</span></div>
+          <figure class="bar-chart" aria-label="Gráfico ilustrativo de ganhos diários da semana">@for (bar of
+            weeklyBars; track bar.day) { <div class="bar-column"><span class="bar-value">{{ bar.amount |
+                currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</span>
+              <div class="bar-track">
+                <div class="bar-fill" [style.height.%]="bar.height"></div>
+              </div><span class="bar-day">{{ bar.day }}</span>
+            </div> }</figure>
+          <div class="chart-foot"><span><i class="legend-dot"></i>Receitas registradas</span><span>Valores de
+              demonstração</span></div>
+        </article>
+        <article class="panel consumption-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">EFICIÊNCIA</span>
+              <h2>Consumo do veículo</h2>
+            </div><span class="status-pill">TANQUE CHEIO</span>
+          </div>
+          <div class="consumption-number">{{ averageConsumption ? (averageConsumption | number:'1.1-1':'pt-BR') : '—' }}
+            <small>km/l</small>
+          </div>
+          <div class="consumption-track"><span></span></div>
+          <p class="muted-copy">{{ averageConsumption ? 'Calculado entre os dois últimos abastecimentos marcados como
+            tanque cheio.' : 'Registre dois abastecimentos de tanque cheio para começar a medição.' }}</p>
+          <div class="consumption-meta"><span>Última medição<strong>{{ averageConsumption ? '455 km percorridos' :
+                'Aguardando dados' }}</strong></span><span>Combustível<strong>{{ fillUps.length ? fillUps[fillUps.length
+                - 1].fuel : '—' }}</strong></span></div><button class="panel-link"
+            (click)="setSection('Abastecimentos')">Ver abastecimentos <span>→</span></button>
+        </article>
+      </section>
+
+      <section class="lower-grid">
+        <article class="panel recent-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">MOVIMENTAÇÃO</span>
+              <h2>Abastecimentos recentes</h2>
+            </div><button class="text-button" (click)="setSection('Abastecimentos')">Ver todos <span>↗</span></button>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>POSTO / DATA</th>
+                  <th>COMBUSTÍVEL</th>
+                  <th>VOLUME</th>
+                  <th>VALOR</th>
+                </tr>
+              </thead>
+              <tbody>@for (entry of sortedFillUps.slice(0, 3); track entry.id) { <tr>
+                  <td><strong>{{ entry.station }}</strong><small>{{ entry.date | date:'d MMM':'':'pt-BR' }}</small></td>
+                  <td><span class="fuel-label"><i></i>{{ entry.fuel }}</span></td>
+                  <td>{{ entry.liters | number:'1.1-1':'pt-BR' }} L</td>
+                  <td class="amount-cell">{{ entry.total | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                </tr> } @empty { <tr>
+                  <td colspan="4" class="empty-cell">Nenhum abastecimento registrado.</td>
+                </tr> }</tbody>
+            </table>
+          </div>
+        </article>
+        <article class="panel quick-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">DECISÃO RÁPIDA</span>
+              <h2>Qual combustível compensa?</h2>
+            </div><span class="decision-spark">✳</span>
+          </div>
+          <p class="muted-copy">Compare o custo real por quilômetro, não só o preço na bomba.</p>
+          <div class="quick-result"><span class="quick-fuel">{{ fuelOptions[0].name }}</span><strong>{{
+              fuelOptions[0].costPerKm | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}<small>/ km</small></strong></div>
+          <button class="button button-outline" (click)="setSection('Comparador')">Comparar combustíveis
+            <span>→</span></button><small class="data-caveat">Estimativa baseada nos preços informados.</small>
+        </article>
+      </section>
+      <footer class="demo-banner"><span class="demo-mark">i</span><span><strong>Dados de demonstração</strong> Os
+          lançamentos iniciais são exemplos e ficam salvos apenas neste navegador.</span><button
+          (click)="setSection('Financeiro')">Adicionar meus dados <span>→</span></button></footer>
+      }
+
+      @if (activeSection === 'Abastecimentos') {
+      <section class="page-heading compact-heading">
+        <div>
+          <div class="eyebrow">CUSTO E CONSUMO</div>
+          <h1>Abastecimentos<span class="heading-period">.</span></h1>
+          <p>Registre cada parada para acompanhar o custo real do seu carro.</p>
+        </div><span class="heading-count">{{ fillUps.length }} registros</span>
+      </section>
+      <div class="form-layout">
+        <section class="panel form-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">NOVO REGISTRO</span>
+              <h2>Dados do abastecimento</h2>
+            </div><span class="form-step">01</span>
+          </div>
+          <form (ngSubmit)="addFillUp()"><label>Posto<input name="station" [(ngModel)]="fillUpForm.station"
+                placeholder="Ex.: Posto Avenida" required></label>
+            <div class="field-row"><label>Data<input name="fillupDate" type="date" [(ngModel)]="fillUpForm.date"
+                  required></label><label>Quilometragem (km)<input name="odometer" type="number" min="1"
+                  [(ngModel)]="fillUpForm.odometer" placeholder="Ex.: 32500" required></label></div>
+            <label>Combustível<select name="fuel" [(ngModel)]="fillUpForm.fuel">@for (fuel of fuelKinds; track fuel) {
+                <option [ngValue]="fuel">{{ fuel }}</option> }
+              </select></label>
+            <div class="field-row"><label>Preço por litro<input name="price" type="number" min="0.01" step="0.01"
+                  [(ngModel)]="fillUpForm.price" placeholder="0,00"
+                  required><small>R$/litro</small></label><label>Litros abastecidos<input name="liters" type="number"
+                  min="0.01" step="0.01" [(ngModel)]="fillUpForm.liters" placeholder="0,0" required><small>Volume em
+                  litros</small></label></div>
+            <div class="total-preview"><span>Total calculado</span><strong>{{ (fillUpForm.price * fillUpForm.liters) |
+                currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div><label class="check-row"><input type="checkbox"
+                name="fullTank" [(ngModel)]="fillUpForm.fullTank"><span>Completei o tanque</span><small>Usado para medir
+                km/l com mais precisão</small></label><button class="button button-primary button-wide"
+              type="submit">Salvar abastecimento <span>→</span></button>
+          </form>
+        </section>
+        <section class="panel table-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">HISTÓRICO</span>
+              <h2>Seus abastecimentos</h2>
+            </div><span class="history-total">{{ fuelCostTotal | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}
+              <small>total</small></span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>POSTO / DATA</th>
+                  <th>COMBUSTÍVEL</th>
+                  <th>PREÇO / L</th>
+                  <th>LITROS</th>
+                  <th>TOTAL</th>
+                  <th>KM</th>
+                </tr>
+              </thead>
+              <tbody>@for (entry of sortedFillUps; track entry.id) { <tr>
+                  <td><strong>{{ entry.station }}</strong><small>{{ entry.date | date:'d MMM yyyy':'':'pt-BR' }}{{
+                      entry.fullTank ? ' · tanque cheio' : '' }}</small></td>
+                  <td>{{ entry.fuel }}</td>
+                  <td>{{ entry.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                  <td>{{ entry.liters | number:'1.1-1':'pt-BR' }} L</td>
+                  <td class="amount-cell">{{ entry.total | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                  <td>{{ entry.odometer | number:'1.0-0':'pt-BR' }}</td>
+                </tr> } @empty { <tr>
+                  <td colspan="6" class="empty-cell">Seu histórico aparecerá aqui.</td>
+                </tr> }</tbody>
+            </table>
+          </div>
+          <div class="measurement-note"><span>i</span>
+            <p><strong>Como medimos:</strong> o consumo considera a distância entre dois abastecimentos de tanque cheio
+              e os litros registrados nesse intervalo. Abastecimentos parciais não iniciam uma medição.</p>
+          </div>
+        </section>
+      </div>
+      }
+
+      @if (activeSection === 'Comparador') {
+      <section class="page-heading compact-heading">
+        <div>
+          <div class="eyebrow">ESCOLHA COM DADOS</div>
+          <h1>Comparador inteligente<span class="heading-period">.</span></h1>
+          <p>O menor preço na bomba nem sempre significa o menor custo por km.</p>
+        </div>
+      </section>
+      <div class="compare-layout">
+        <section class="panel compare-input-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">SUA ESTIMATIVA</span>
+              <h2>Parâmetros da comparação</h2>
+            </div>
+          </div><label>Distância até o posto<input type="number" name="distance" min="0" step="0.5"
+              [(ngModel)]="compareForm.distance"><small>Ida e volta em quilômetros</small></label><label>Consumo de
+            referência<input type="number" name="consumption" min="1" step="0.1"
+              [(ngModel)]="compareForm.consumption"><small>Km/l usando gasolina. Etanol estimado a 70%.</small></label>
+          <div class="price-fields"><label>Gasolina comum<input type="number" name="gasoline" min="0.01" step="0.01"
+                [(ngModel)]="compareForm.gasoline"></label><label>Gasolina aditivada<input type="number" name="additive"
+                min="0.01" step="0.01" [(ngModel)]="compareForm.additive"></label><label>Etanol comum<input
+                type="number" name="ethanol" min="0.01" step="0.01"
+                [(ngModel)]="compareForm.ethanol"></label><label>Etanol aditivado<input type="number"
+                name="ethanolAdditive" min="0.01" step="0.01" [(ngModel)]="compareForm.ethanolAdditive"></label></div>
+          <p class="inline-caveat">A comparação entre etanol e gasolina usa uma referência inicial de consumo. Registre
+            medições do seu carro para ajustar a estimativa.</p>
+        </section>
+        <section class="panel ranking-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">MENOR CUSTO POR KM</span>
+              <h2>Resultado da comparação</h2>
+            </div><span class="winner-star">✳</span>
+          </div>@for (option of fuelOptions; track option.name; let index = $index) { <article class="rank-row"
+            [class.rank-winner]="index === 0">
+            <div class="rank-number">0{{ index + 1 }}</div>
+            <div class="rank-content">
+              <div class="rank-top"><strong>{{ option.name }}</strong>@if (index === 0) { <span class="best-tag">MELHOR
+                  CUSTO</span> }</div><small>{{ option.station }}</small>
+              <div class="rank-bar"><span [style.width.%]="Math.max(14, 100 - index * 19)"></span></div>
+            </div>
+            <div class="rank-cost"><strong>{{ option.costPerKm | currency:'BRL':'symbol':'1.2-2':'pt-BR'
+                }}</strong><small>por km</small></div>
+          </article> }<div class="trip-estimate"><span>Custo estimado de combustível no deslocamento</span><strong>{{
+              fuelOptions[0].tripCost | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Ida e volta de {{
+              compareForm.distance | number:'1.0-1':'pt-BR' }} km · não inclui pedágio ou trânsito</small></div>
+          <p class="inline-caveat">A gasolina aditivada só compensa se o seu consumo medido reduzir o custo por
+            quilômetro. Este cálculo não presume benefício de desempenho.</p>
+        </section>
+      </div>
+      }
+
+      @if (activeSection === 'Financeiro') {
+      <section class="page-heading compact-heading">
+        <div>
+          <div class="eyebrow">CONTROLE DO TRABALHO</div>
+          <h1>Financeiro<span class="heading-period">.</span></h1>
+          <p>Registre receitas de corridas e despesas operacionais do carro.</p>
+        </div>
+      </section>
+      <section class="finance-metrics">
+        <article class="metric-card"><span>Receitas registradas</span><strong class="finance-income">{{ totalIncome |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Uber, 99 e outras corridas</small></article>
+        <article class="metric-card"><span>Despesas operacionais</span><strong class="finance-expenses">{{ totalExpenses
+            | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Inclui combustível e manutenção</small>
+        </article>
+        <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ estimatedProfit |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Receitas − despesas registradas</small></article>
+      </section>
+      <div class="finance-layout">
+        <section class="panel form-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">NOVO LANÇAMENTO</span>
+              <h2>Receita ou despesa</h2>
+            </div>
+          </div>
+          <form (ngSubmit)="addLedgerEntry()">
+            <div class="segmented-control">
+              <button type="button" [class.selected]="ledgerForm.kind === 'Receita'"
+                (click)="ledgerForm.kind = 'Receita'">Receita</button>
+              <button type="button" [class.selected]="ledgerForm.kind === 'Despesa'"
+                (click)="ledgerForm.kind = 'Despesa'">Despesa</button>
+            </div>
+            <label>Descrição<input name="description" [(ngModel)]="ledgerForm.description"
+                [placeholder]="ledgerForm.kind === 'Receita' ? 'Ex.: Ganhos Uber' : 'Ex.: Pedágio'" required></label>
+            <div class="field-row">
+              <label>Categoria<select name="category" [(ngModel)]="ledgerForm.category">
+                  <option>Corridas</option>
+                  <option>Pedágio</option>
+                  <option>Estacionamento</option>
+                  <option>Lavagem</option>
+                  <option>Seguro</option>
+                  <option>Outros</option>
+                </select></label>
+              <label>Data<input name="entryDate" type="date" [(ngModel)]="ledgerForm.date" required></label>
+            </div>
+            <label>Valor<input name="amount" type="number" min="0.01" step="0.01" [(ngModel)]="ledgerForm.amount"
+                placeholder="0,00" required></label>
+            <button class="button button-primary button-wide" type="submit">Salvar lançamento <span>→</span></button>
+          </form>
+        </section>
+        <section class="panel table-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">MOVIMENTAÇÃO</span>
+              <h2>Lançamentos recentes</h2>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>DESCRIÇÃO / DATA</th>
+                  <th>CATEGORIA</th>
+                  <th>TIPO</th>
+                  <th>VALOR</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (entry of sortedLedger; track entry.id) { <tr>
+                  <td><strong>{{ entry.description }}</strong><small>{{ entry.date | date:'d MMM yyyy':'':'pt-BR'
+                      }}</small></td>
+                  <td>{{ entry.category }}</td>
+                  <td><span class="kind-tag" [class.kind-income]="entry.kind === 'Receita'">{{ entry.kind }}</span></td>
+                  <td class="amount-cell" [class.finance-income]="entry.kind === 'Receita'">{{ entry.kind === 'Despesa'
+                    ? '− ' : '+ ' }}{{ entry.amount | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                </tr> } @empty { <tr>
+                  <td colspan="4" class="empty-cell">Nenhum lançamento financeiro.</td>
+                </tr> }</tbody>
+            </table>
+          </div>
+          <div class="measurement-note"><span>i</span>
+            <p>Abastecimentos e manutenções entram automaticamente como custos no cálculo do lucro estimado. Confira se
+              não registrou a mesma despesa duas vezes.</p>
+          </div>
+        </section>
+      </div>
+      }
+
+      @if (activeSection === 'Manutencao') {
+      <section class="page-heading compact-heading">
+        <div>
+          <div class="eyebrow">CUIDADO COM O CARRO</div>
+          <h1>Manutenção<span class="heading-period">.</span></h1>
+          <p>Organize revisões, pneus, óleo e outros custos do veículo.</p>
+        </div>
+      </section>
+      <div class="finance-layout">
+        <section class="panel form-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">NOVO CUSTO</span>
+              <h2>Registrar manutenção</h2>
+            </div>
+          </div>
+          <form (ngSubmit)="addMaintenance()">
+            <label>Descrição<input name="maintenanceName" [(ngModel)]="maintenanceForm.description"
+                placeholder="Ex.: Troca de óleo" required></label>
+            <div class="field-row">
+              <label>Tipo<select name="maintenanceCategory" [(ngModel)]="maintenanceForm.category">
+                  <option>Revisao</option>
+                  <option>Oleo</option>
+                  <option>Pneus</option>
+                  <option>Freios</option>
+                  <option>Documentacao</option>
+                  <option>Outro</option>
+                </select></label>
+              <label>Data<input name="maintenanceDate" type="date" [(ngModel)]="maintenanceForm.date" required></label>
+            </div>
+            <label>Custo<input name="maintenanceAmount" type="number" min="0.01" step="0.01"
+                [(ngModel)]="maintenanceForm.amount" placeholder="0,00" required></label>
+            <button class="button button-primary button-wide" type="submit">Salvar custo <span>→</span></button>
+          </form>
+        </section>
+        <section class="panel table-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">HISTÓRICO</span>
+              <h2>Custos do veículo</h2>
+            </div><span class="history-total">{{ maintenance.reduce(sumAmounts, 0) |
+              currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>SERVIÇO / DATA</th>
+                  <th>TIPO</th>
+                  <th>CUSTO</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (item of maintenance; track item.id) { <tr>
+                  <td><strong>{{ item.description }}</strong><small>{{ item.date | date:'d MMM yyyy':'':'pt-BR'
+                      }}</small></td>
+                  <td>{{ item.category }}</td>
+                  <td class="amount-cell">{{ item.amount | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                </tr> } @empty { <tr>
+                  <td colspan="3" class="empty-cell">Registre custos para acompanhar o histórico do carro.</td>
+                </tr> }</tbody>
+            </table>
+          </div>
+        </section>
+      </div>
+      }
+
+      @if (activeSection === 'Relatorios') {
+      <section class="page-heading compact-heading">
+        <div>
+          <div class="eyebrow">NÚMEROS DO SEU NEGÓCIO</div>
+          <h1>Relatórios<span class="heading-period">.</span></h1>
+          <p>Resumo baseado nos lançamentos registrados neste dispositivo.</p>
+        </div>
+        <select class="period-select" aria-label="Período do relatório">
+          <option>Últimos 7 dias</option>
+          <option>Este mês</option>
+          <option>Todo o período</option>
+        </select>
+      </section>
+      <section class="finance-metrics">
+        <article class="metric-card"><span>Receitas registradas</span><strong>{{ totalIncome |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Dados locais</small></article>
+        <article class="metric-card"><span>Despesas registradas</span><strong>{{ totalExpenses |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Combustível, manutenção e outros</small></article>
+        <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ estimatedProfit |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Resultado operacional</small></article>
+      </section>
+      <div class="overview-grid report-grid">
+        <section class="panel earnings-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">MOVIMENTO DIÁRIO</span>
+              <h2>Receitas da semana</h2>
+            </div><span class="status-pill">DEMONSTRAÇÃO</span>
+          </div>
+          <div class="chart-total">R$ 2.667,00 <span>últimos 7 dias</span></div>
+          <figure class="bar-chart report-chart" aria-label="Ganhos demonstrativos da semana">@for (bar of
+            weeklyBars; track bar.day) { <div class="bar-column"><span class="bar-value">{{ bar.amount |
+                currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</span>
+              <div class="bar-track">
+                <div class="bar-fill" [style.height.%]="bar.height"></div>
+              </div><span class="bar-day">{{ bar.day }}</span>
+            </div> }</figure>
+        </section>
+        <section class="panel breakdown-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">DESPESAS REGISTRADAS</span>
+              <h2>Onde o dinheiro vai</h2>
+            </div>
+          </div>
+          <div class="breakdown-row"><span><i class="breakdown-dot fuel-dot"></i>Combustível</span><strong>{{
+              fuelCostTotal | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
+          <div class="breakdown-row"><span><i class="breakdown-dot maintenance-dot"></i>Manutenção</span><strong>{{
+              maintenance.reduce(sumAmounts, 0) | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
+          <div class="breakdown-row"><span><i class="breakdown-dot other-dot"></i>Outras despesas</span><strong>{{
+              otherExpenses | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
+          <p class="inline-caveat">Relatórios semanais e mensais detalhados serão calculados por data quando a
+            sincronização com a API estiver ativa.</p>
+        </section>
+      </div>
+      }
+
+      @if (activeSection === 'Mapa') {
+      <section class="page-heading compact-heading">
+        <div>
+          <div class="eyebrow">POSTOS PERTO DE VOCÊ</div>
+          <h1>Mapa de postos<span class="heading-period">.</span></h1>
+          <p>Veja preços e custo do deslocamento antes de sair da rota.</p>
+        </div>
+        <button class="button button-outline" (click)="setSection('Comparador')">Abrir comparador
+          <span>→</span></button>
+      </section>
+      <section class="panel map-panel">
+        <div class="map-visual">
+          <div class="map-label map-label-a">Sua localização <span>●</span></div>
+          <div class="map-road road-horizontal"></div>
+          <div class="map-road road-vertical"></div>
+          <div class="map-road road-diagonal"></div>
+          <div class="map-block block-a"></div>
+          <div class="map-block block-b"></div>
+          <div class="map-block block-c"></div>
+          <div class="map-block block-d"></div>
+          <div class="map-pin pin-user"><span>⌖</span></div>
+          <div class="map-station station-one"><span>⛽</span><strong>R$ 5,79</strong></div>
+          <div class="map-station station-two"><span>⛽</span><strong>R$ 5,89</strong></div>
+          <div class="map-station station-three"><span>⛽</span><strong>R$ 6,09</strong></div>
+          <div class="map-disclaimer">Visualização de demonstração · sem postos ou preços ao vivo</div>
+        </div>
+        <aside class="map-side" aria-label="Requisitos para integração de mapa"><span class="panel-kicker">INTEGRAÇÃO
+            PENDENTE</span>
+          <h2>Encontre o melhor preço no caminho.</h2>
+          <p>Para mostrar postos reais, distância e preços atualizados, é necessário configurar um provedor de mapas e
+            uma fonte de preços local.</p>
+          <div class="map-requirements"><span>01 <strong>Localização do dispositivo</strong></span>
+            <span>02 <strong>Google Maps ou alternativa compatível</strong></span>
+            <span>03 <strong>Fonte confiável de preços</strong></span>
+          </div>
+          <button class="button button-primary button-wide" (click)="setSection('Comparador')">Comparar preços
+            informados <span>→</span></button>
+        </aside>
+      </section>
+      }
+    </main>
+  </div>
+</div>
