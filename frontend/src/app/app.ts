@@ -26,6 +26,14 @@ interface LedgerEntry {
   kind: 'Receita' | 'Despesa';
 }
 
+type RecordCollection = 'fillups' | 'ledger' | 'maintenance';
+
+interface DeleteCandidate {
+  collection: RecordCollection;
+  id: number;
+  description: string;
+}
+
 @Component({
   imports: [FormsModule, CurrencyPipe, DatePipe, DecimalPipe],
   selector: 'app-root',
@@ -39,7 +47,7 @@ export class App {
   readonly today = new Date().toISOString().slice(0, 10);
   readonly currentMonth = this.today.slice(0, 7);
   selectedMonth = this.currentMonth;
-  showResetConfirmation = false;
+  deleteCandidate: DeleteCandidate | null = null;
   readonly fillUps: FillUp[] = this.readRecords('rota-economica-fillups', [
     { id: 1, date: '2026-10-06', station: 'Posto Avenida', fuel: 'Gasolina comum', price: 5.89, liters: 38, total: 223.82, odometer: 31840, fullTank: true },
     { id: 2, date: '2026-10-11', station: 'Auto Posto Central', fuel: 'Gasolina comum', price: 5.79, liters: 37, total: 214.23, odometer: 32295, fullTank: true },
@@ -218,24 +226,45 @@ export class App {
     return total + entry.amount;
   }
 
-  requestReset(): void {
-    this.showResetConfirmation = true;
+  requestDelete(collection: RecordCollection, id: number, description: string): void {
+    this.deleteCandidate = { collection, id, description };
   }
 
-  cancelReset(): void {
-    this.showResetConfirmation = false;
+  cancelDelete(): void {
+    this.deleteCandidate = null;
   }
 
-  confirmReset(): void {
-    this.fillUps.splice(0);
-    this.ledger.splice(0);
-    this.maintenance.splice(0);
-    localStorage.setItem('rota-economica-demo-disabled', 'true');
-    this.persist('rota-economica-fillups', this.fillUps);
-    this.persist('rota-economica-ledger', this.ledger);
-    this.persist('rota-economica-maintenance', this.maintenance);
-    this.showResetConfirmation = false;
-    this.showNotice('Todos os registros foram zerados. Os exemplos não serão restaurados.');
+  confirmDelete(): void {
+    const candidate = this.deleteCandidate;
+    if (!candidate) return;
+
+    let records: Array<FillUp | LedgerEntry>;
+    let storageKey: string;
+    switch (candidate.collection) {
+      case 'fillups':
+        records = this.fillUps;
+        storageKey = 'rota-economica-fillups';
+        break;
+      case 'ledger':
+        records = this.ledger;
+        storageKey = 'rota-economica-ledger';
+        break;
+      case 'maintenance':
+        records = this.maintenance;
+        storageKey = 'rota-economica-maintenance';
+        break;
+    }
+    const index = records.findIndex((record) => record.id === candidate.id);
+    if (index < 0) {
+      this.cancelDelete();
+      this.showNotice('Este registro já não está disponível.');
+      return;
+    }
+
+    records.splice(index, 1);
+    this.persist(storageKey, records);
+    this.deleteCandidate = null;
+    this.showNotice('Registro excluído. Os demais registros e meses foram mantidos.');
   }
 
   addFillUp(): void {
@@ -321,7 +350,7 @@ export class App {
     try {
       const stored = localStorage.getItem(key);
       if (stored) return JSON.parse(stored) as T;
-      return localStorage.getItem('rota-economica-demo-disabled') === 'true' ? [] as T : demoRecords;
+      return demoRecords;
     } catch {
       return demoRecords;
     }

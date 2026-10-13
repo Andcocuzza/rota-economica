@@ -9,7 +9,7 @@ Aplicação responsiva para motoristas de aplicativo acompanharem abastecimentos
 - Comparação de gasolina comum/aditivada e etanol comum/aditivado pelo custo estimado por quilômetro. O etanol parte de uma estimativa configurável de 70% do consumo da gasolina.
 - Lançamentos de receitas e despesas, estimativa de lucro e registro de manutenção.
 - Totais e gráficos separados por mês, com comparação de receitas, despesas e lucro contra o mês anterior. A virada mensal inicia os totais do novo mês sem apagar o histórico.
-- Ação confirmada para zerar abastecimentos, receitas, despesas e manutenções de todos os meses salvos neste dispositivo.
+- Ação de excluir individualmente abastecimentos, receitas/despesas e manutenções, com confirmação e preservação dos demais registros.
 - Painel responsivo e PWA instalável; os lançamentos do frontend ficam no armazenamento local deste navegador.
 - API REST para abastecimentos, consumo, movimentação financeira e resumo operacional.
 - Banco PostgreSQL iniciado por Docker Compose e esquema versionado por Flyway.
@@ -75,7 +75,7 @@ Configurações podem ser sobrescritas por `DATABASE_URL`, `DATABASE_USER`, `DAT
 
 ## Dados, integrações e limites atuais
 
-O frontend inicia com registros de exemplo claramente identificados e grava novos dados somente no `localStorage` do navegador. Os valores são agrupados pela data de cada lançamento; ao começar um mês novo, os totais mensais começam zerados e os anteriores continuam disponíveis nos relatórios. A ação **Zerar todos os registros** apaga todo o histórico local após confirmação e impede que os exemplos iniciais retornem nesse navegador.
+O frontend inicia com registros de exemplo claramente identificados e grava novos dados somente no `localStorage` do navegador. Os valores são agrupados pela data de cada lançamento; ao começar um mês novo, os totais mensais começam zerados e os anteriores continuam disponíveis nos relatórios. Para corrigir um erro, use **Excluir** na linha do abastecimento, lançamento ou manutenção; a confirmação remove somente aquele item e preserva os demais meses.
 
 O frontend ainda não sincroniza esses dados com a API; o backend já oferece os endpoints para essa próxima integração. Não há cadastro/login de usuário nem compartilhamento entre dispositivos.
 

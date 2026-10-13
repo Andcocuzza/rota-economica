@@ -136,10 +136,11 @@ label > small { color: #969f99; font-size: 8px; font-weight: 400; }
 .report-actions { display: flex; align-items: center; gap: 9px; }
 .month-select-label { display: flex; align-items: center; gap: 7px; color: #59665f; font-size: 10px; font-weight: 700; }
 .month-select-label .period-select { min-width: 145px; }
-.button-danger-outline { border-color: #e8c9bd; background: #fff; color: #a65039; }
-.button-danger-outline:hover { background: #fff5f1; }
 .button-danger { background: #a94732; color: #fff; }
 .button-danger:hover { background: #873a2a; }
+.delete-record-button { min-height: 28px; border: 1px solid #e8c9bd; border-radius: 3px; background: #fff; padding: 0 8px; color: #963f2e; font-size: 9px; font-weight: 700; cursor: pointer; }
+.delete-record-button:hover { border-color: #dba895; background: #fff5f1; }
+.delete-record-button:focus-visible { outline: 2px solid #963f2e; outline-offset: 2px; }
 .report-grid { margin-top: 0; }.report-chart { height: 200px; }.report-chart .bar-track { height: 140px; }.breakdown-panel { min-height: 240px; }.breakdown-row { display: flex; justify-content: space-between; gap: 12px; padding: 15px 0; border-bottom: 1px solid #edf0ec; color: #68756e; font-size: 10px; }.breakdown-row span { display: flex; align-items: center; gap: 8px; }.breakdown-row strong { color: $ink; }.breakdown-dot { width: 8px; height: 8px; border-radius: 50%; }.fuel-dot { background: #d0a34a; }.maintenance-dot { background: #78a889; }.other-dot { background: #71909a; }
 .month-comparison { margin-top: 14px; padding: 19px 20px; }
 .comparison-note { color: $muted; font-size: 9px; }

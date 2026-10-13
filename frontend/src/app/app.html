@@ -208,6 +208,7 @@
                   <th>LITROS</th>
                   <th>TOTAL</th>
                   <th>KM</th>
+                  <th>AÇÃO</th>
                 </tr>
               </thead>
               <tbody>@for (entry of sortedFillUps; track entry.id) { <tr>
@@ -218,8 +219,11 @@
                   <td>{{ entry.liters | number:'1.1-1':'pt-BR' }} L</td>
                   <td class="amount-cell">{{ entry.total | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
                   <td>{{ entry.odometer | number:'1.0-0':'pt-BR' }}</td>
+                  <td><button type="button" class="delete-record-button"
+                      [attr.aria-label]="'Excluir abastecimento de ' + entry.station"
+                      (click)="requestDelete('fillups', entry.id, entry.station)">Excluir</button></td>
                 </tr> } @empty { <tr>
-                  <td colspan="6" class="empty-cell">Seu histórico aparecerá aqui.</td>
+                  <td colspan="7" class="empty-cell">Seu histórico aparecerá aqui.</td>
                 </tr> }</tbody>
             </table>
           </div>
@@ -352,6 +356,7 @@
                   <th>CATEGORIA</th>
                   <th>TIPO</th>
                   <th>VALOR</th>
+                  <th>AÇÃO</th>
                 </tr>
               </thead>
               <tbody>
@@ -362,8 +367,11 @@
                   <td><span class="kind-tag" [class.kind-income]="entry.kind === 'Receita'">{{ entry.kind }}</span></td>
                   <td class="amount-cell" [class.finance-income]="entry.kind === 'Receita'">{{ entry.kind === 'Despesa'
                     ? '− ' : '+ ' }}{{ entry.amount | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                  <td><button type="button" class="delete-record-button"
+                      [attr.aria-label]="'Excluir lançamento ' + entry.description"
+                      (click)="requestDelete('ledger', entry.id, entry.description)">Excluir</button></td>
                 </tr> } @empty { <tr>
-                  <td colspan="4" class="empty-cell">Nenhum lançamento financeiro.</td>
+                  <td colspan="5" class="empty-cell">Nenhum lançamento financeiro.</td>
                 </tr> }</tbody>
             </table>
           </div>
@@ -423,6 +431,7 @@
                   <th>SERVIÇO / DATA</th>
                   <th>TIPO</th>
                   <th>CUSTO</th>
+                  <th>AÇÃO</th>
                 </tr>
               </thead>
               <tbody>
@@ -431,8 +440,11 @@
                       }}</small></td>
                   <td>{{ item.category }}</td>
                   <td class="amount-cell">{{ item.amount | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                  <td><button type="button" class="delete-record-button"
+                      [attr.aria-label]="'Excluir manutenção ' + item.description"
+                      (click)="requestDelete('maintenance', item.id, item.description)">Excluir</button></td>
                 </tr> } @empty { <tr>
-                  <td colspan="3" class="empty-cell">Registre custos para acompanhar o histórico do carro.</td>
+                  <td colspan="4" class="empty-cell">Registre custos para acompanhar o histórico do carro.</td>
                 </tr> }</tbody>
             </table>
           </div>
@@ -453,8 +465,6 @@
               @for (month of monthOptions; track month) { <option [ngValue]="month">{{ monthLabel(month) }}</option> }
             </select>
           </label>
-          <button type="button" class="button button-danger-outline" (click)="requestReset()">Zerar todos os
-            registros</button>
         </div>
       </section>
       <section class="finance-metrics">
@@ -535,17 +545,17 @@
       </section>
       }
 
-      @if (showResetConfirmation) {
+      @if (deleteCandidate) {
       <div class="modal-backdrop">
-        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reset-title"
-          aria-describedby="reset-description">
-          <span class="panel-kicker">AÇÃO IRREVERSÍVEL</span>
-          <h2 id="reset-title">Zerar todos os registros?</h2>
-          <p id="reset-description">Isso apagará abastecimentos, receitas, despesas e manutenções de todos os meses
-            neste dispositivo. Os dados não poderão ser recuperados e os exemplos não voltarão.</p>
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="delete-title"
+          aria-describedby="delete-description">
+          <span class="panel-kicker">EXCLUSÃO DE UM ITEM</span>
+          <h2 id="delete-title">Excluir este registro?</h2>
+          <p id="delete-description">Somente “{{ deleteCandidate.description }}” será removido. Os demais registros e
+            meses serão mantidos.</p>
           <div class="dialog-actions"><button type="button" class="button button-outline"
-              (click)="cancelReset()">Cancelar</button><button type="button" class="button button-danger"
-              (click)="confirmReset()">Sim, zerar tudo</button></div>
+              (click)="cancelDelete()">Manter registro</button><button type="button" class="button button-danger"
+              (click)="confirmDelete()">Excluir registro</button></div>
         </section>
       </div>
       }

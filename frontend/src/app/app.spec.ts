@@ -61,31 +61,68 @@ describe('App', () => {
     expect(app.comparisonMonth).not.toBe(previousMonth);
   });
 
-  it('clears every record only after confirmation and does not restore demo records', () => {
+  it('deletes only the selected record after confirmation and preserves other records', () => {
     const app = TestBed.createComponent(App).componentInstance;
-    expect(app.fillUps.length + app.ledger.length).toBeGreaterThan(0);
-    app.requestReset();
-    expect(app.showResetConfirmation).toBe(true);
-    expect(app.fillUps.length + app.ledger.length).toBeGreaterThan(0);
+    const ledgerBefore = [...app.ledger];
+    const fillUpsBefore = [...app.fillUps];
+    const expensesBefore = app.totalExpenses;
+    const target = app.ledger.find((entry) => entry.id === 2)!;
+    app.requestDelete('ledger', target.id, target.description);
+    expect(app.deleteCandidate?.id).toBe(target.id);
+    expect(app.ledger).toHaveLength(ledgerBefore.length);
 
-    app.confirmReset();
-    expect(app.fillUps).toHaveLength(0);
-    expect(app.ledger).toHaveLength(0);
-    expect(app.maintenance).toHaveLength(0);
+    app.confirmDelete();
+    expect(app.ledger).toHaveLength(ledgerBefore.length - 1);
+    expect(app.ledger.some((entry) => entry.id === target.id)).toBe(false);
+    expect(app.fillUps).toEqual(fillUpsBefore);
+    expect(app.totalExpenses).toBe(expensesBefore - target.amount);
+    expect(JSON.parse(localStorage.getItem('rota-economica-ledger') ?? '[]')).toHaveLength(ledgerBefore.length - 1);
 
     const reopened = TestBed.createComponent(App).componentInstance;
-    expect(reopened.fillUps).toHaveLength(0);
-    expect(reopened.ledger).toHaveLength(0);
-    expect(reopened.maintenance).toHaveLength(0);
+    expect(reopened.ledger).toHaveLength(ledgerBefore.length - 1);
+    expect(reopened.fillUps).toEqual(fillUpsBefore);
   });
 
-  it('shows the monthly comparison and reset control in reports', async () => {
+  it('deletes a single fill-up without deleting financial or maintenance records', () => {
+    const app = TestBed.createComponent(App).componentInstance;
+    const target = app.fillUps[0];
+    const ledgerBefore = [...app.ledger];
+    app.requestDelete('fillups', target.id, target.station);
+    app.confirmDelete();
+
+    expect(app.fillUps.some((entry) => entry.id === target.id)).toBe(false);
+    expect(app.fillUps).toHaveLength(1);
+    expect(app.ledger).toEqual(ledgerBefore);
+  });
+
+  it('deletes a single maintenance record without removing other entries', () => {
+    const app = TestBed.createComponent(App).componentInstance;
+    app.maintenance.push({ id: 42, date: app.today, description: 'Troca de óleo', category: 'Oleo', amount: 120, kind: 'Despesa' });
+    app.ledger.push({ id: 43, date: app.today, description: 'Corridas', category: 'Corridas', amount: 300, kind: 'Receita' });
+    const incomeBefore = app.totalIncome;
+    app.requestDelete('maintenance', 42, 'Troca de óleo');
+    app.confirmDelete();
+
+    expect(app.maintenance).toHaveLength(0);
+    expect(app.totalIncome).toBe(incomeBefore);
+    expect(app.ledger.some((entry) => entry.id === 43)).toBe(true);
+  });
+
+  it('shows the monthly comparison in reports and individual delete actions in finance', async () => {
     const fixture = TestBed.createComponent(App);
     const app = fixture.componentInstance;
     app.setSection('Relatorios');
     fixture.detectChanges();
-    const content = fixture.nativeElement.textContent as string;
-    expect(content).toContain('COMPARAÇÃO MENSAL');
-    expect(content).toContain('Zerar todos os registros');
+    expect((fixture.nativeElement.textContent as string)).toContain('COMPARAÇÃO MENSAL');
+    expect((fixture.nativeElement.textContent as string)).not.toContain('Zerar todos os registros');
+
+    const financeFixture = TestBed.createComponent(App);
+    const financeApp = financeFixture.componentInstance;
+    financeApp.selectedMonth = financeApp.ledger[0].date.slice(0, 7);
+    financeApp.setSection('Financeiro');
+    financeFixture.detectChanges();
+    const deleteButtons = financeFixture.nativeElement.querySelectorAll('.delete-record-button') as NodeListOf<HTMLButtonElement>;
+    expect(deleteButtons.length).toBeGreaterThan(0);
+    expect(deleteButtons[0].getAttribute('aria-label')).toContain('Excluir lançamento');
   });
 });
