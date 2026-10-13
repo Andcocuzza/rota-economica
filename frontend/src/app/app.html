@@ -76,19 +76,20 @@
         <article class="panel earnings-panel">
           <div class="panel-heading">
             <div><span class="panel-kicker">SEU RITMO</span>
-              <h2>Ganhos da semana</h2>
+              <h2>Ganhos do mês</h2>
             </div><button class="text-button" (click)="setSection('Relatorios')">Ver relatórios <span>↗</span></button>
           </div>
-          <div class="chart-total">R$ 2.667,00 <span>últimos 7 dias</span></div>
-          <figure class="bar-chart" aria-label="Gráfico ilustrativo de ganhos diários da semana">@for (bar of
-            weeklyBars; track bar.day) { <div class="bar-column"><span class="bar-value">{{ bar.amount |
+          <div class="chart-total">{{ totalIncome | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} <span>{{
+              monthLabel(currentMonth) }}</span></div>
+          <figure class="bar-chart" aria-label="Ganhos semanais do mês atual">@for (bar of
+            currentMonthBars; track bar.day) { <div class="bar-column"><span class="bar-value">{{ bar.amount |
                 currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</span>
               <div class="bar-track">
                 <div class="bar-fill" [style.height.%]="bar.height"></div>
               </div><span class="bar-day">{{ bar.day }}</span>
             </div> }</figure>
-          <div class="chart-foot"><span><i class="legend-dot"></i>Receitas registradas</span><span>Valores de
-              demonstração</span></div>
+          <div class="chart-foot"><span><i class="legend-dot"></i>Receitas registradas</span><span>Por semana do
+              mês</span></div>
         </article>
         <article class="panel consumption-panel">
           <div class="panel-heading">
@@ -286,16 +287,23 @@
         <div>
           <div class="eyebrow">CONTROLE DO TRABALHO</div>
           <h1>Financeiro<span class="heading-period">.</span></h1>
-          <p>Registre receitas de corridas e despesas operacionais do carro.</p>
+          <p>Registros de {{ monthLabel(selectedMonth) }}. Meses anteriores permanecem salvos para comparação.</p>
         </div>
+        <label class="month-select-label"><span>Mês</span>
+          <select class="period-select" [(ngModel)]="selectedMonth">
+            @for (month of monthOptions; track month) { <option [ngValue]="month">{{ monthLabel(month) }}</option> }
+          </select>
+        </label>
       </section>
       <section class="finance-metrics">
-        <article class="metric-card"><span>Receitas registradas</span><strong class="finance-income">{{ totalIncome |
+        <article class="metric-card"><span>Receitas em {{ monthLabel(selectedMonth) }}</span><strong
+            class="finance-income">{{ selectedMonthIncome |
             currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Uber, 99 e outras corridas</small></article>
-        <article class="metric-card"><span>Despesas operacionais</span><strong class="finance-expenses">{{ totalExpenses
+        <article class="metric-card"><span>Despesas operacionais</span><strong class="finance-expenses">{{
+            selectedMonthExpenses
             | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Inclui combustível e manutenção</small>
         </article>
-        <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ estimatedProfit |
+        <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ selectedMonthProfit |
             currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Receitas − despesas registradas</small></article>
       </section>
       <div class="finance-layout">
@@ -347,7 +355,7 @@
                 </tr>
               </thead>
               <tbody>
-                @for (entry of sortedLedger; track entry.id) { <tr>
+                @for (entry of selectedMonthLedger; track entry.id) { <tr>
                   <td><strong>{{ entry.description }}</strong><small>{{ entry.date | date:'d MMM yyyy':'':'pt-BR'
                       }}</small></td>
                   <td>{{ entry.category }}</td>
@@ -437,32 +445,38 @@
         <div>
           <div class="eyebrow">NÚMEROS DO SEU NEGÓCIO</div>
           <h1>Relatórios<span class="heading-period">.</span></h1>
-          <p>Resumo baseado nos lançamentos registrados neste dispositivo.</p>
+          <p>Selecione um mês para consultar seus valores e comparar com o mês anterior.</p>
         </div>
-        <select class="period-select" aria-label="Período do relatório">
-          <option>Últimos 7 dias</option>
-          <option>Este mês</option>
-          <option>Todo o período</option>
-        </select>
+        <div class="report-actions">
+          <label class="month-select-label"><span>Mês</span>
+            <select class="period-select" [(ngModel)]="selectedMonth">
+              @for (month of monthOptions; track month) { <option [ngValue]="month">{{ monthLabel(month) }}</option> }
+            </select>
+          </label>
+          <button type="button" class="button button-danger-outline" (click)="requestReset()">Zerar todos os
+            registros</button>
+        </div>
       </section>
       <section class="finance-metrics">
-        <article class="metric-card"><span>Receitas registradas</span><strong>{{ totalIncome |
-            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Dados locais</small></article>
-        <article class="metric-card"><span>Despesas registradas</span><strong>{{ totalExpenses |
-            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Combustível, manutenção e outros</small></article>
-        <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ estimatedProfit |
-            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Resultado operacional</small></article>
+        <article class="metric-card"><span>Receitas em {{ monthLabel(selectedMonth) }}</span><strong>{{
+            selectedMonthIncome |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Corridas e outras receitas</small></article>
+        <article class="metric-card"><span>Despesas do mês</span><strong>{{ selectedMonthExpenses |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Combustível, manutenção e outras</small></article>
+        <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ selectedMonthProfit |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Resultado operacional mensal</small></article>
       </section>
       <div class="overview-grid report-grid">
         <section class="panel earnings-panel">
           <div class="panel-heading">
-            <div><span class="panel-kicker">MOVIMENTO DIÁRIO</span>
-              <h2>Receitas da semana</h2>
-            </div><span class="status-pill">DEMONSTRAÇÃO</span>
+            <div><span class="panel-kicker">MOVIMENTO DO MÊS</span>
+              <h2>Receitas por semana</h2>
+            </div><span class="status-pill">{{ monthLabel(selectedMonth) }}</span>
           </div>
-          <div class="chart-total">R$ 2.667,00 <span>últimos 7 dias</span></div>
-          <figure class="bar-chart report-chart" aria-label="Ganhos demonstrativos da semana">@for (bar of
-            weeklyBars; track bar.day) { <div class="bar-column"><span class="bar-value">{{ bar.amount |
+          <div class="chart-total">{{ selectedMonthIncome | currency:'BRL':'symbol':'1.2-2':'pt-BR' }} <span>no
+              mês</span></div>
+          <figure class="bar-chart report-chart" aria-label="Receitas semanais do mês selecionado">@for (bar of
+            selectedMonthBars; track bar.day) { <div class="bar-column"><span class="bar-value">{{ bar.amount |
                 currency:'BRL':'symbol':'1.0-0':'pt-BR' }}</span>
               <div class="bar-track">
                 <div class="bar-fill" [style.height.%]="bar.height"></div>
@@ -476,13 +490,62 @@
             </div>
           </div>
           <div class="breakdown-row"><span><i class="breakdown-dot fuel-dot"></i>Combustível</span><strong>{{
-              fuelCostTotal | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
+              selectedMonthFuel | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
           <div class="breakdown-row"><span><i class="breakdown-dot maintenance-dot"></i>Manutenção</span><strong>{{
-              maintenance.reduce(sumAmounts, 0) | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
+              selectedMonthMaintenance | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
           <div class="breakdown-row"><span><i class="breakdown-dot other-dot"></i>Outras despesas</span><strong>{{
-              otherExpenses | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
-          <p class="inline-caveat">Relatórios semanais e mensais detalhados serão calculados por data quando a
-            sincronização com a API estiver ativa.</p>
+              selectedMonthOtherExpenses | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
+        </section>
+      </div>
+      <section class="panel month-comparison">
+        <div class="panel-heading">
+          <div><span class="panel-kicker">COMPARAÇÃO MENSAL</span>
+            <h2>{{ monthLabel(selectedMonth) }} × {{ monthLabel(comparisonMonth) }}</h2>
+          </div>
+          <span class="comparison-note">O mês anterior fica guardado automaticamente</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>INDICADOR</th>
+                <th>{{ monthLabel(selectedMonth) }}</th>
+                <th>{{ monthLabel(comparisonMonth) }}</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Receitas</td>
+                <td class="amount-cell">{{ selectedMonthIncome | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td>{{ comparisonMonthIncome | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              </tr>
+              <tr>
+                <td>Despesas</td>
+                <td class="amount-cell">{{ selectedMonthExpenses | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td>{{ comparisonMonthExpenses | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              </tr>
+              <tr>
+                <td>Lucro estimado</td>
+                <td class="amount-cell">{{ selectedMonthProfit | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td>{{ comparisonMonthProfit | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+      }
+
+      @if (showResetConfirmation) {
+      <div class="modal-backdrop">
+        <section class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reset-title"
+          aria-describedby="reset-description">
+          <span class="panel-kicker">AÇÃO IRREVERSÍVEL</span>
+          <h2 id="reset-title">Zerar todos os registros?</h2>
+          <p id="reset-description">Isso apagará abastecimentos, receitas, despesas e manutenções de todos os meses
+            neste dispositivo. Os dados não poderão ser recuperados e os exemplos não voltarão.</p>
+          <div class="dialog-actions"><button type="button" class="button button-outline"
+              (click)="cancelReset()">Cancelar</button><button type="button" class="button button-danger"
+              (click)="confirmReset()">Sim, zerar tudo</button></div>
         </section>
       </div>
       }

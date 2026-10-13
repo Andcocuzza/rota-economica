@@ -8,6 +8,8 @@ Aplicação responsiva para motoristas de aplicativo acompanharem abastecimentos
 - Cálculo do valor abastecido e consumo km/l entre abastecimentos marcados como tanque cheio.
 - Comparação de gasolina comum/aditivada e etanol comum/aditivado pelo custo estimado por quilômetro. O etanol parte de uma estimativa configurável de 70% do consumo da gasolina.
 - Lançamentos de receitas e despesas, estimativa de lucro e registro de manutenção.
+- Totais e gráficos separados por mês, com comparação de receitas, despesas e lucro contra o mês anterior. A virada mensal inicia os totais do novo mês sem apagar o histórico.
+- Ação confirmada para zerar abastecimentos, receitas, despesas e manutenções de todos os meses salvos neste dispositivo.
 - Painel responsivo e PWA instalável; os lançamentos do frontend ficam no armazenamento local deste navegador.
 - API REST para abastecimentos, consumo, movimentação financeira e resumo operacional.
 - Banco PostgreSQL iniciado por Docker Compose e esquema versionado por Flyway.
@@ -73,11 +75,13 @@ Configurações podem ser sobrescritas por `DATABASE_URL`, `DATABASE_USER`, `DAT
 
 ## Dados, integrações e limites atuais
 
-O frontend inicia com registros de exemplo claramente identificados e grava novos dados somente no `localStorage` do navegador. Ele ainda não sincroniza esses dados com a API; o backend já oferece os endpoints para essa próxima integração. Não há cadastro/login de usuário nem compartilhamento entre dispositivos.
+O frontend inicia com registros de exemplo claramente identificados e grava novos dados somente no `localStorage` do navegador. Os valores são agrupados pela data de cada lançamento; ao começar um mês novo, os totais mensais começam zerados e os anteriores continuam disponíveis nos relatórios. A ação **Zerar todos os registros** apaga todo o histórico local após confirmação e impede que os exemplos iniciais retornem nesse navegador.
+
+O frontend ainda não sincroniza esses dados com a API; o backend já oferece os endpoints para essa próxima integração. Não há cadastro/login de usuário nem compartilhamento entre dispositivos.
 
 A visualização do mapa é ilustrativa, não contém postos ou preços ao vivo. Busca de postos, geolocalização e cálculo real de rota precisam de um provedor de mapas e uma fonte de preços configurados. Não há afirmação de que gasolina aditivada economiza mais: a comparação usa o custo/km medido ou estimado informado.
 
-O lucro considera apenas receitas, despesas financeiras, abastecimentos e manutenção registrados. Os gráficos semanais no painel são valores demonstrativos e não devem ser interpretados como dados importados de Uber ou 99.
+O lucro considera apenas receitas, despesas financeiras, abastecimentos e manutenção registrados. Os registros iniciais são dados demonstrativos e não são importados de Uber ou 99.
 
 ## Testes
 
