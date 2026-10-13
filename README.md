@@ -4,10 +4,11 @@ Aplicação responsiva para motoristas de aplicativo acompanharem abastecimentos
 
 ## O que está pronto
 
-- Registro de abastecimentos com posto, data, tipo de combustível, preço/litro, litros, total e odômetro.
+- Registro de abastecimentos com valor pago, preço/litro, volume calculado, app/programa e desconto variável por parada, além de posto, data, combustível e odômetro.
 - Cálculo do valor abastecido e consumo km/l entre abastecimentos marcados como tanque cheio.
 - Comparação de gasolina comum/aditivada e etanol comum/aditivado pelo custo estimado por quilômetro. O etanol parte de uma estimativa configurável de 70% do consumo da gasolina.
 - Lançamentos de receitas e despesas, estimativa de lucro e registro de manutenção.
+- Registro separado de horas trabalhadas por dia. Uma segunda gravação na mesma data atualiza a jornada em vez de somar horas duplicadas; o painel mostra total mensal e ganho médio por hora.
 - Totais e gráficos separados por mês, com comparação de receitas, despesas e lucro contra o mês anterior. A virada mensal inicia os totais do novo mês sem apagar o histórico.
 - Ação de excluir individualmente abastecimentos, receitas/despesas e manutenções, com confirmação e preservação dos demais registros.
 - Painel responsivo e PWA instalável; os lançamentos do frontend ficam no armazenamento local deste navegador.
@@ -75,7 +76,9 @@ Configurações podem ser sobrescritas por `DATABASE_URL`, `DATABASE_USER`, `DAT
 
 ## Dados, integrações e limites atuais
 
-O frontend inicia com registros de exemplo claramente identificados e grava novos dados somente no `localStorage` do navegador. Os valores são agrupados pela data de cada lançamento; ao começar um mês novo, os totais mensais começam zerados e os anteriores continuam disponíveis nos relatórios. Para corrigir um erro, use **Excluir** na linha do abastecimento, lançamento ou manutenção; a confirmação remove somente aquele item e preserva os demais meses.
+O frontend inicia com registros de exemplo claramente identificados e grava novos dados somente no `localStorage` do navegador. Para abastecimentos, informe o valor pago e o preço da bomba; o volume recebido é calculado por `(valor pago + desconto recebido) / preço por litro`. O custo financeiro usa somente o valor efetivamente pago. Quando houver desconto, informe também o nome do app ou programa; o app e o valor variam por abastecimento.
+
+Os valores são agrupados pela data de cada lançamento; ao começar um mês novo, os totais mensais começam zerados e os anteriores continuam disponíveis nos relatórios. As horas são registros diários independentes das receitas, para que várias corridas ou apps no mesmo dia não dupliquem a jornada. Para corrigir um erro, use **Excluir** na linha do abastecimento, lançamento, manutenção ou jornada; a confirmação remove somente aquele item e preserva os demais registros e meses.
 
 O frontend ainda não sincroniza esses dados com a API; o backend já oferece os endpoints para essa próxima integração. Não há cadastro/login de usuário nem compartilhamento entre dispositivos.
 

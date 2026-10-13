@@ -13,6 +13,8 @@ interface FillUp {
   price: number;
   liters: number;
   total: number;
+  discountAmount?: number;
+  discountProvider?: string;
   odometer: number;
   fullTank: boolean;
 }
@@ -26,7 +28,14 @@ interface LedgerEntry {
   kind: 'Receita' | 'Despesa';
 }
 
-type RecordCollection = 'fillups' | 'ledger' | 'maintenance';
+interface WorkDay {
+  id: number;
+  date: string;
+  hours: number;
+}
+
+type DeletableRecord = FillUp | LedgerEntry | WorkDay;
+type RecordCollection = 'fillups' | 'ledger' | 'maintenance' | 'workdays';
 
 interface DeleteCandidate {
   collection: RecordCollection;
@@ -57,9 +66,11 @@ export class App {
     { id: 2, date: '2026-10-12', description: 'Lavagem completa', category: 'Limpeza', amount: 45, kind: 'Despesa' },
     { id: 3, date: '2026-10-11', description: 'Ganhos 99', category: 'Corridas', amount: 386, kind: 'Receita' },
   ]);
+  readonly workDays: WorkDay[] = this.readRecords('rota-economica-workdays', []);
 
-  fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum' as FuelKind, price: 0, liters: 0, odometer: 0, fullTank: true };
+  fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum' as FuelKind, price: 0, totalPaid: 0, discountAmount: 0, discountProvider: '', odometer: 0, fullTank: true };
   ledgerForm = { date: this.today, description: '', category: 'Corridas', amount: 0, kind: 'Receita' as 'Receita' | 'Despesa' };
+  workDayForm = { date: this.today, hours: 0 };
   compareForm = { distance: 8, consumption: 11, gasoline: 5.89, additive: 6.09, ethanol: 3.89, ethanolAdditive: 4.09 };
   maintenanceForm = { description: '', category: 'Revisao', amount: 0, date: this.today };
   maintenance: LedgerEntry[] = this.readRecords('rota-economica-maintenance', []);
@@ -68,6 +79,14 @@ export class App {
 
   get totalIncome(): number {
     return this.sumLedger(this.currentMonth, 'Receita');
+  }
+
+  get currentMonthHours(): number {
+    return this.sumHours(this.currentMonth);
+  }
+
+  get currentMonthHourlyIncome(): number | null {
+    return this.currentMonthHours > 0 ? this.totalIncome / this.currentMonthHours : null;
   }
 
   get totalExpenses(): number {
@@ -95,11 +114,16 @@ export class App {
   }
 
   get latestPrice(): number {
-    return this.fillUps.at(-1)?.price ?? 0;
+    const latest = this.fillUps.at(-1);
+    return latest && latest.liters > 0 ? latest.total / latest.liters : 0;
   }
 
   get fuelCostTotal(): number {
     return this.sumFillUps(this.currentMonth);
+  }
+
+  get currentMonthDiscounts(): number {
+    return this.sumDiscounts(this.currentMonth);
   }
 
   get otherExpenses(): number {
@@ -115,6 +139,7 @@ export class App {
       ...this.fillUps.map((entry) => entry.date.slice(0, 7)),
       ...this.ledger.map((entry) => entry.date.slice(0, 7)),
       ...this.maintenance.map((entry) => entry.date.slice(0, 7)),
+      ...this.workDays.map((entry) => entry.date.slice(0, 7)),
       this.currentMonth,
     ];
     return [...new Set(recordedMonths)].sort((left, right) => right.localeCompare(left));
@@ -130,6 +155,14 @@ export class App {
     return this.sumLedger(this.selectedMonth, 'Receita');
   }
 
+  get selectedMonthHours(): number {
+    return this.sumHours(this.selectedMonth);
+  }
+
+  get selectedMonthHourlyIncome(): number | null {
+    return this.selectedMonthHours > 0 ? this.selectedMonthIncome / this.selectedMonthHours : null;
+  }
+
   get selectedMonthExpenses(): number {
     return this.monthExpenses(this.selectedMonth);
   }
@@ -140,6 +173,14 @@ export class App {
 
   get comparisonMonthIncome(): number {
     return this.sumLedger(this.comparisonMonth, 'Receita');
+  }
+
+  get comparisonMonthDiscounts(): number {
+    return this.sumDiscounts(this.comparisonMonth);
+  }
+
+  get comparisonMonthHours(): number {
+    return this.sumHours(this.comparisonMonth);
   }
 
   get comparisonMonthExpenses(): number {
@@ -175,6 +216,10 @@ export class App {
     return this.sumFillUps(this.selectedMonth);
   }
 
+  get selectedMonthDiscounts(): number {
+    return this.sumDiscounts(this.selectedMonth);
+  }
+
   get selectedMonthOtherExpenses(): number {
     return this.sumLedger(this.selectedMonth, 'Despesa');
   }
@@ -185,6 +230,11 @@ export class App {
 
   get sortedLedger(): LedgerEntry[] {
     return [...this.ledger].sort((left, right) => right.date.localeCompare(left.date));
+  }
+
+  get selectedMonthWorkDays(): WorkDay[] {
+    return this.workDays.filter((entry) => entry.date.startsWith(this.selectedMonth))
+      .sort((left, right) => right.date.localeCompare(left.date));
   }
 
   get fuelOptions(): { name: FuelKind; price: number; costPerKm: number; tripCost: number; station: string }[] {
@@ -238,7 +288,7 @@ export class App {
     const candidate = this.deleteCandidate;
     if (!candidate) return;
 
-    let records: Array<FillUp | LedgerEntry>;
+    let records: DeletableRecord[];
     let storageKey: string;
     switch (candidate.collection) {
       case 'fillups':
@@ -252,6 +302,10 @@ export class App {
       case 'maintenance':
         records = this.maintenance;
         storageKey = 'rota-economica-maintenance';
+        break;
+      case 'workdays':
+        records = this.workDays;
+        storageKey = 'rota-economica-workdays';
         break;
     }
     const index = records.findIndex((record) => record.id === candidate.id);
@@ -268,18 +322,24 @@ export class App {
   }
 
   addFillUp(): void {
-    const { date, station, fuel, price, liters, odometer, fullTank } = this.fillUpForm;
-    if (!station.trim() || price <= 0 || liters <= 0 || odometer <= 0) {
-      this.showNotice('Preencha posto, preco, litros e quilometragem com valores validos.');
+    const { date, station, fuel, price, totalPaid, discountAmount, discountProvider, odometer, fullTank } = this.fillUpForm;
+    if (!station.trim() || price <= 0 || totalPaid <= 0 || discountAmount < 0 || odometer <= 0) {
+      this.showNotice('Preencha posto, preco por litro, valor pago e quilometragem com valores validos.');
+      return;
+    }
+    if (discountAmount > 0 && !discountProvider.trim()) {
+      this.showNotice('Informe o app ou programa que concedeu o desconto.');
       return;
     }
     if (this.fillUps.some((entry) => entry.odometer >= odometer)) {
       this.showNotice('A quilometragem deve ser maior que a do abastecimento anterior.');
       return;
     }
-    this.fillUps.push({ id: Date.now(), date, station: station.trim(), fuel, price, liters, total: price * liters, odometer, fullTank });
+    const liters = Math.round(((totalPaid + discountAmount) / price) * 1000) / 1000;
+    this.fillUps.push({ id: Date.now(), date, station: station.trim(), fuel, price, liters, total: totalPaid,
+      discountAmount, ...(discountProvider.trim() ? { discountProvider: discountProvider.trim() } : {}), odometer, fullTank });
     this.persist('rota-economica-fillups', this.fillUps);
-    this.fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum', price: 0, liters: 0, odometer: 0, fullTank: true };
+    this.fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum', price: 0, totalPaid: 0, discountAmount: 0, discountProvider: '', odometer: 0, fullTank: true };
     this.showNotice('Abastecimento registrado.');
   }
 
@@ -293,6 +353,23 @@ export class App {
     this.persist('rota-economica-ledger', this.ledger);
     this.ledgerForm = { date: this.today, description: '', category: 'Corridas', amount: 0, kind };
     this.showNotice('Lancamento financeiro salvo.');
+  }
+
+  addWorkDay(): void {
+    const { date, hours } = this.workDayForm;
+    if (!date || hours <= 0 || hours > 24) {
+      this.showNotice('Informe uma jornada entre 0,25 e 24 horas.');
+      return;
+    }
+    const existing = this.workDays.find((entry) => entry.date === date);
+    if (existing) {
+      existing.hours = hours;
+    } else {
+      this.workDays.push({ id: Date.now(), date, hours });
+    }
+    this.persist('rota-economica-workdays', this.workDays);
+    this.workDayForm = { date: this.today, hours: 0 };
+    this.showNotice(existing ? 'Jornada do dia atualizada.' : 'Jornada do dia registrada.');
   }
 
   addMaintenance(): void {
@@ -319,9 +396,19 @@ export class App {
       .reduce((sum, entry) => sum + entry.amount, 0);
   }
 
+  private sumHours(month: string): number {
+    return this.workDays.filter((entry) => entry.date.startsWith(month))
+      .reduce((sum, entry) => sum + entry.hours, 0);
+  }
+
   private sumFillUps(month: string): number {
     return this.fillUps.filter((entry) => entry.date.startsWith(month))
       .reduce((sum, entry) => sum + entry.total, 0);
+  }
+
+  private sumDiscounts(month: string): number {
+    return this.fillUps.filter((entry) => entry.date.startsWith(month))
+      .reduce((sum, entry) => sum + (entry.discountAmount ?? 0), 0);
   }
 
   private sumMaintenance(month: string): number {

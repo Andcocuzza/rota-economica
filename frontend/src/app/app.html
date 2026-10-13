@@ -72,6 +72,20 @@
         </article>
       </section>
 
+      <section class="work-hours-band" aria-label="Resumo de horas trabalhadas">
+        <span class="work-hours-icon" aria-hidden="true">◷</span>
+        <div><span class="panel-kicker">JORNADA DO MÊS</span><strong>{{ currentMonthHours | number:'1.1-2':'pt-BR' }}
+            h</strong></div>
+        <span class="hours-divider"></span>
+        <div><span class="panel-kicker">GANHO MÉDIO POR HORA</span><strong>{{ currentMonthHourlyIncome ?
+            (currentMonthHourlyIncome | currency:'BRL':'symbol':'1.2-2':'pt-BR') : '—' }}</strong></div>
+        <button type="button" class="text-button" (click)="setSection('Financeiro')">Registrar jornada
+          <span>→</span></button>
+      </section>
+      <section class="discount-summary-band"><span class="discount-summary-icon"
+          aria-hidden="true">%</span><span>Descontos usados neste mês</span><strong>{{ currentMonthDiscounts |
+          currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Informados em cada abastecimento</small></section>
+
       <section class="overview-grid">
         <article class="panel earnings-panel">
           <div class="panel-heading">
@@ -179,14 +193,25 @@
             <label>Combustível<select name="fuel" [(ngModel)]="fillUpForm.fuel">@for (fuel of fuelKinds; track fuel) {
                 <option [ngValue]="fuel">{{ fuel }}</option> }
               </select></label>
-            <div class="field-row"><label>Preço por litro<input name="price" type="number" min="0.01" step="0.01"
-                  [(ngModel)]="fillUpForm.price" placeholder="0,00"
-                  required><small>R$/litro</small></label><label>Litros abastecidos<input name="liters" type="number"
-                  min="0.01" step="0.01" [(ngModel)]="fillUpForm.liters" placeholder="0,0" required><small>Volume em
-                  litros</small></label></div>
-            <div class="total-preview"><span>Total calculado</span><strong>{{ (fillUpForm.price * fillUpForm.liters) |
-                currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div><label class="check-row"><input type="checkbox"
-                name="fullTank" [(ngModel)]="fillUpForm.fullTank"><span>Completei o tanque</span><small>Usado para medir
+            <div class="field-row"><label>Valor pago<input name="totalPaid" type="number" min="0.01" step="0.01"
+                  [(ngModel)]="fillUpForm.totalPaid" placeholder="100,00" required><small>Total da nota, em
+                  reais</small></label>
+              <label>Preço por litro<input name="price" type="number" min="0.01" step="0.01"
+                  [(ngModel)]="fillUpForm.price" placeholder="0,00" required><small>R$/litro</small></label>
+            </div>
+            <div class="field-row"><label>Desconto recebido<input name="discountAmount" type="number" min="0"
+                  step="0.01" [(ngModel)]="fillUpForm.discountAmount" placeholder="0,00"><small>Valor total abatido
+                  neste abastecimento</small></label>
+              <label>App ou programa usado<input name="discountProvider" type="text" maxlength="80"
+                  [(ngModel)]="fillUpForm.discountProvider" placeholder="Ex.: app do posto"><small>Pode variar em cada
+                  abastecimento</small></label>
+            </div>
+            <div class="total-preview"><span>Litros abastecidos (calculado)</span><strong>{{ fillUpForm.price > 0 &&
+                fillUpForm.totalPaid > 0 ? ((fillUpForm.totalPaid + fillUpForm.discountAmount) / fillUpForm.price |
+                number:'1.2-3':'pt-BR') + ' L' :
+                '—' }}</strong></div>
+            <label class="check-row"><input type="checkbox" name="fullTank"
+                [(ngModel)]="fillUpForm.fullTank"><span>Completei o tanque</span><small>Usado para medir
                 km/l com mais precisão</small></label><button class="button button-primary button-wide"
               type="submit">Salvar abastecimento <span>→</span></button>
           </form>
@@ -205,6 +230,7 @@
                   <th>POSTO / DATA</th>
                   <th>COMBUSTÍVEL</th>
                   <th>PREÇO / L</th>
+                  <th>APP / DESCONTO</th>
                   <th>LITROS</th>
                   <th>TOTAL</th>
                   <th>KM</th>
@@ -216,14 +242,16 @@
                       entry.fullTank ? ' · tanque cheio' : '' }}</small></td>
                   <td>{{ entry.fuel }}</td>
                   <td>{{ entry.price | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
-                  <td>{{ entry.liters | number:'1.1-1':'pt-BR' }} L</td>
+                  <td>{{ entry.discountProvider || '—' }}<small>{{ (entry.discountAmount ?? 0) |
+                      currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</small></td>
+                  <td>{{ entry.liters | number:'1.1-3':'pt-BR' }} L</td>
                   <td class="amount-cell">{{ entry.total | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
                   <td>{{ entry.odometer | number:'1.0-0':'pt-BR' }}</td>
                   <td><button type="button" class="delete-record-button"
                       [attr.aria-label]="'Excluir abastecimento de ' + entry.station"
                       (click)="requestDelete('fillups', entry.id, entry.station)">Excluir</button></td>
                 </tr> } @empty { <tr>
-                  <td colspan="7" class="empty-cell">Seu histórico aparecerá aqui.</td>
+                  <td colspan="8" class="empty-cell">Seu histórico aparecerá aqui.</td>
                 </tr> }</tbody>
             </table>
           </div>
@@ -309,6 +337,57 @@
         </article>
         <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ selectedMonthProfit |
             currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Receitas − despesas registradas</small></article>
+        <article class="metric-card"><span>Horas trabalhadas</span><strong>{{ selectedMonthHours |
+            number:'1.1-2':'pt-BR' }} h</strong><small>{{ selectedMonthHourlyIncome ? (selectedMonthHourlyIncome |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR') + ' por hora' : 'Registre a jornada por dia' }}</small></article>
+      </section>
+      <section class="workday-layout">
+        <article class="panel form-panel">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">JORNADA DIÁRIA</span>
+              <h2>Horas trabalhadas</h2>
+            </div>
+          </div>
+          <form (ngSubmit)="addWorkDay()">
+            <label>Data<input name="workDate" type="date" [(ngModel)]="workDayForm.date" required></label>
+            <label>Total de horas do dia<input name="workHours" type="number" min="0.25" max="24" step="0.25"
+                [(ngModel)]="workDayForm.hours" placeholder="Ex.: 7,5" required><small>Se lançar a mesma data de novo, o
+                total do dia será atualizado.</small></label>
+            <button class="button button-outline button-wide" type="submit">Salvar jornada do dia
+              <span>→</span></button>
+          </form>
+        </article>
+        <article class="panel table-panel workday-history">
+          <div class="panel-heading">
+            <div><span class="panel-kicker">MÊS SELECIONADO</span>
+              <h2>Jornadas por dia</h2>
+            </div><span class="history-total">{{ selectedMonthHours | number:'1.1-2':'pt-BR' }} h</span>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>DATA</th>
+                  <th>HORAS</th>
+                  <th>AÇÃO</th>
+                </tr>
+              </thead>
+              <tbody>
+                @for (day of selectedMonthWorkDays; track day.id) { <tr>
+                  <td>{{ day.date | date:'EEEE, d MMM':'':'pt-BR' }}</td>
+                  <td class="amount-cell">{{ day.hours | number:'1.1-2':'pt-BR' }} h</td>
+                  <td><button type="button" class="delete-record-button"
+                      [attr.aria-label]="'Excluir jornada de ' + day.date"
+                      (click)="requestDelete('workdays', day.id, 'jornada de ' + day.date)">Excluir</button>
+                  </td>
+                </tr> }
+                @empty { <tr>
+                  <td colspan="3" class="empty-cell">Ainda não há jornadas registradas neste mês.</td>
+                </tr> }
+              </tbody>
+            </table>
+          </div>
+        </article>
       </section>
       <div class="finance-layout">
         <section class="panel form-panel">
@@ -475,6 +554,10 @@
             currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Combustível, manutenção e outras</small></article>
         <article class="metric-card metric-profit"><span>Lucro estimado</span><strong>{{ selectedMonthProfit |
             currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong><small>Resultado operacional mensal</small></article>
+        <article class="metric-card"><span>Horas trabalhadas</span><strong>{{ selectedMonthHours |
+            number:'1.1-2':'pt-BR' }} h</strong><small>{{ selectedMonthHourlyIncome ? (selectedMonthHourlyIncome |
+            currency:'BRL':'symbol':'1.2-2':'pt-BR') + ' por hora' : 'Registre horas junto às receitas' }}</small>
+        </article>
       </section>
       <div class="overview-grid report-grid">
         <section class="panel earnings-panel">
@@ -501,6 +584,9 @@
           </div>
           <div class="breakdown-row"><span><i class="breakdown-dot fuel-dot"></i>Combustível</span><strong>{{
               selectedMonthFuel | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
+          <div class="breakdown-row"><span><i class="breakdown-dot discount-dot"></i>Descontos em
+              combustível</span><strong>{{ selectedMonthDiscounts | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong>
+          </div>
           <div class="breakdown-row"><span><i class="breakdown-dot maintenance-dot"></i>Manutenção</span><strong>{{
               selectedMonthMaintenance | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</strong></div>
           <div class="breakdown-row"><span><i class="breakdown-dot other-dot"></i>Outras despesas</span><strong>{{
@@ -538,6 +624,16 @@
                 <td>Lucro estimado</td>
                 <td class="amount-cell">{{ selectedMonthProfit | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
                 <td>{{ comparisonMonthProfit | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+              </tr>
+              <tr>
+                <td>Horas trabalhadas</td>
+                <td class="amount-cell">{{ selectedMonthHours | number:'1.1-2':'pt-BR' }} h</td>
+                <td>{{ comparisonMonthHours | number:'1.1-2':'pt-BR' }} h</td>
+              </tr>
+              <tr>
+                <td>Descontos de combustível</td>
+                <td class="amount-cell">{{ selectedMonthDiscounts | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
+                <td>{{ comparisonMonthDiscounts | currency:'BRL':'symbol':'1.2-2':'pt-BR' }}</td>
               </tr>
             </tbody>
           </table>
