@@ -57,7 +57,7 @@ h1 { margin: 0; color: $ink; font: 500 37px/1.1 Georgia, 'Times New Roman', seri
 .button-plus { font-size: 18px; font-weight: 400; }
 .button-outline { border-color: #ced9d1; background: transparent; color: $green-dark; }
 .button-outline:hover { background: #edf4ef; }
-.metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.metric-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; }
 .metric-card { min-width: 0; min-height: 145px; position: relative; padding: 17px 18px 14px; border: 1px solid $line; border-radius: 5px; background: #fff; animation: rise-in .42s both; }
 .metric-card:nth-child(2) { animation-delay: .04s; }.metric-card:nth-child(3) { animation-delay: .08s; }.metric-card:nth-child(4) { animation-delay: .12s; }
 .metric-profit { border-color: #d5e6d8; background: #f1f7f0; }
@@ -145,18 +145,12 @@ label > small { color: #969f99; font-size: 8px; font-weight: 400; }
 .month-comparison { margin-top: 14px; padding: 19px 20px; }
 .comparison-note { color: $muted; font-size: 9px; }
 .month-comparison table { min-width: 420px; }
-.work-hours-band, .discount-summary-band { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 14px 18px; border: 1px solid #dfe8df; border-radius: 5px; background: #f1f6f0; }
-.work-hours-icon, .discount-summary-icon { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: #dcecdf; color: $green-dark; font-size: 17px; }
+.work-hours-band { display: flex; align-items: center; gap: 14px; margin-top: 12px; padding: 14px 18px; border: 1px solid #dfe8df; border-radius: 5px; background: #f1f6f0; }
+.work-hours-icon { width: 32px; height: 32px; flex: 0 0 auto; display: grid; place-items: center; border-radius: 50%; background: #dcecdf; color: $green-dark; font-size: 17px; }
 .work-hours-band > div { display: grid; gap: 4px; }
 .work-hours-band > div > strong { color: $ink; font: 600 17px Georgia, serif; }
 .hours-divider { width: 1px; height: 32px; background: #d7e2d8; }
 .work-hours-band > .text-button { margin-left: auto; white-space: nowrap; }
-.discount-summary-band { margin: 9px 0 14px; background: #fbfaf5; border-color: #ebe7d8; }
-.discount-summary-icon { background: #f5edcf; color: #796323; }
-.discount-summary-band > span:nth-child(2) { color: #69766e; font-size: 10px; }
-.discount-summary-band > strong { color: #6c5a20; font: 600 16px Georgia, serif; }
-.discount-summary-band > small { margin-left: auto; color: $muted; font-size: 9px; }
-.discount-dot { background: #c9a143; }
 .workday-layout { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(0, 1.55fr); align-items: start; gap: 14px; margin-bottom: 14px; }
 .workday-layout .form-panel, .workday-layout .table-panel { padding: 18px; }
 .workday-history table { min-width: 320px; }

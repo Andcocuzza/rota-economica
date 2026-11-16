@@ -13,10 +13,7 @@ interface FillUp {
   price: number;
   liters: number;
   total: number;
-  discountAmount?: number;
-  discountProvider?: string;
-  odometer: number;
-  fullTank: boolean;
+  distanceDriven?: number;
 }
 
 interface LedgerEntry {
@@ -54,12 +51,12 @@ export class App {
   activeSection: Section = 'Visao geral';
   readonly fuelKinds: FuelKind[] = ['Gasolina comum', 'Gasolina aditivada', 'Etanol comum', 'Etanol aditivado'];
   readonly today = new Date().toISOString().slice(0, 10);
-  readonly currentMonth = this.today.slice(0, 7);
-  selectedMonth = this.currentMonth;
+  readonly currentWeek = this.weekStart(this.today);
+  selectedWeek = this.currentWeek;
   deleteCandidate: DeleteCandidate | null = null;
   readonly fillUps: FillUp[] = this.readRecords('rota-economica-fillups', [
-    { id: 1, date: '2026-10-06', station: 'Posto Avenida', fuel: 'Gasolina comum', price: 5.89, liters: 38, total: 223.82, odometer: 31840, fullTank: true },
-    { id: 2, date: '2026-10-11', station: 'Auto Posto Central', fuel: 'Gasolina comum', price: 5.79, liters: 37, total: 214.23, odometer: 32295, fullTank: true },
+    { id: 1, date: '2026-10-06', station: 'Posto Avenida', fuel: 'Gasolina comum', price: 5.89, liters: 38, total: 223.82 },
+    { id: 2, date: '2026-10-11', station: 'Auto Posto Central', fuel: 'Gasolina comum', price: 5.79, liters: 37, total: 214.23 },
   ]);
   readonly ledger: LedgerEntry[] = this.readRecords('rota-economica-ledger', [
     { id: 1, date: '2026-10-12', description: 'Ganhos Uber', category: 'Corridas', amount: 438.5, kind: 'Receita' },
@@ -68,160 +65,133 @@ export class App {
   ]);
   readonly workDays: WorkDay[] = this.readRecords('rota-economica-workdays', []);
 
-  fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum' as FuelKind, price: 0, totalPaid: 0, discountAmount: 0, discountProvider: '', odometer: 0, fullTank: true };
+  fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum' as FuelKind, price: 0, totalPaid: 0, distanceDriven: 0 };
   ledgerForm = { date: this.today, description: '', category: 'Corridas', amount: 0, kind: 'Receita' as 'Receita' | 'Despesa' };
   workDayForm = { date: this.today, hours: 0 };
-  compareForm = { distance: 8, consumption: 11, gasoline: 5.89, additive: 6.09, ethanol: 3.89, ethanolAdditive: 4.09 };
+  compareForm = { distance: 8 };
   maintenanceForm = { description: '', category: 'Revisao', amount: 0, date: this.today };
   maintenance: LedgerEntry[] = this.readRecords('rota-economica-maintenance', []);
   notice = '';
   private noticeTimer?: ReturnType<typeof setTimeout>;
 
   get totalIncome(): number {
-    return this.sumLedger(this.currentMonth, 'Receita');
+    return this.sumLedger(this.currentWeek, 'Receita');
   }
 
-  get currentMonthHours(): number {
-    return this.sumHours(this.currentMonth);
+  get currentWeekHours(): number {
+    return this.sumHours(this.currentWeek);
   }
 
-  get currentMonthHourlyIncome(): number | null {
-    return this.currentMonthHours > 0 ? this.totalIncome / this.currentMonthHours : null;
+  get currentWeekHourlyIncome(): number | null {
+    return this.currentWeekHours > 0 ? this.totalIncome / this.currentWeekHours : null;
   }
 
   get totalExpenses(): number {
-    return this.monthExpenses(this.currentMonth);
+    return this.weekExpenses(this.currentWeek);
   }
 
   get estimatedProfit(): number {
     return this.totalIncome - this.totalExpenses;
   }
 
-  get averageConsumption(): number | null {
-    const fullTanks = this.fillUps.filter((entry) => entry.fullTank).sort((left, right) => left.odometer - right.odometer);
-    if (fullTanks.length < 2) return null;
-    const previous = fullTanks.at(-2)!;
-    const latest = fullTanks.at(-1)!;
-    const distance = latest.odometer - previous.odometer;
-    const liters = this.fillUps
-      .filter((entry) => entry.odometer > previous.odometer && entry.odometer <= latest.odometer)
-      .reduce((sum, entry) => sum + entry.liters, 0);
-    return distance > 0 && liters > 0 ? distance / liters : null;
-  }
-
   get costPerKm(): number | null {
-    return this.averageConsumption ? this.latestPrice / this.averageConsumption : null;
-  }
-
-  get latestPrice(): number {
-    const latest = this.fillUps.at(-1);
-    return latest && latest.liters > 0 ? latest.total / latest.liters : 0;
+    const latest = this.latestFillUp;
+    return latest?.distanceDriven && latest.distanceDriven > 0 ? latest.total / latest.distanceDriven : null;
   }
 
   get fuelCostTotal(): number {
-    return this.sumFillUps(this.currentMonth);
-  }
-
-  get currentMonthDiscounts(): number {
-    return this.sumDiscounts(this.currentMonth);
+    return this.sumFillUps(this.currentWeek);
   }
 
   get otherExpenses(): number {
-    return this.sumLedger(this.currentMonth, 'Despesa');
+    return this.sumLedger(this.currentWeek, 'Despesa');
   }
 
   get maintenanceCostTotal(): number {
-    return this.sumMaintenance(this.currentMonth);
+    return this.sumMaintenance(this.currentWeek);
   }
 
-  get monthOptions(): string[] {
-    const recordedMonths = [
-      ...this.fillUps.map((entry) => entry.date.slice(0, 7)),
-      ...this.ledger.map((entry) => entry.date.slice(0, 7)),
-      ...this.maintenance.map((entry) => entry.date.slice(0, 7)),
-      ...this.workDays.map((entry) => entry.date.slice(0, 7)),
-      this.currentMonth,
+  get weekOptions(): string[] {
+    const recordedWeeks = [
+      ...this.fillUps.map((entry) => this.weekStart(entry.date)),
+      ...this.ledger.map((entry) => this.weekStart(entry.date)),
+      ...this.maintenance.map((entry) => this.weekStart(entry.date)),
+      ...this.workDays.map((entry) => this.weekStart(entry.date)),
+      this.currentWeek,
     ];
-    return [...new Set(recordedMonths)].sort((left, right) => right.localeCompare(left));
+    return [...new Set(recordedWeeks)].sort((left, right) => right.localeCompare(left));
   }
 
-  get comparisonMonth(): string {
-    const [year, month] = this.selectedMonth.split('-').map(Number);
-    const previous = new Date(Date.UTC(year, month - 2, 1));
-    return `${previous.getUTCFullYear()}-${String(previous.getUTCMonth() + 1).padStart(2, '0')}`;
+  get comparisonWeek(): string {
+    return this.addDays(this.selectedWeek, -7);
   }
 
-  get selectedMonthIncome(): number {
-    return this.sumLedger(this.selectedMonth, 'Receita');
+  get selectedWeekIncome(): number {
+    return this.sumLedger(this.selectedWeek, 'Receita');
   }
 
-  get selectedMonthHours(): number {
-    return this.sumHours(this.selectedMonth);
+  get selectedWeekHours(): number {
+    return this.sumHours(this.selectedWeek);
   }
 
-  get selectedMonthHourlyIncome(): number | null {
-    return this.selectedMonthHours > 0 ? this.selectedMonthIncome / this.selectedMonthHours : null;
+  get selectedWeekHourlyIncome(): number | null {
+    return this.selectedWeekHours > 0 ? this.selectedWeekIncome / this.selectedWeekHours : null;
   }
 
-  get selectedMonthExpenses(): number {
-    return this.monthExpenses(this.selectedMonth);
+  get selectedWeekExpenses(): number {
+    return this.weekExpenses(this.selectedWeek);
   }
 
-  get selectedMonthProfit(): number {
-    return this.selectedMonthIncome - this.selectedMonthExpenses;
+  get selectedWeekProfit(): number {
+    return this.selectedWeekIncome - this.selectedWeekExpenses;
   }
 
-  get comparisonMonthIncome(): number {
-    return this.sumLedger(this.comparisonMonth, 'Receita');
+  get comparisonWeekIncome(): number {
+    return this.sumLedger(this.comparisonWeek, 'Receita');
   }
 
-  get comparisonMonthDiscounts(): number {
-    return this.sumDiscounts(this.comparisonMonth);
+  get comparisonWeekHours(): number {
+    return this.sumHours(this.comparisonWeek);
   }
 
-  get comparisonMonthHours(): number {
-    return this.sumHours(this.comparisonMonth);
+  get comparisonWeekExpenses(): number {
+    return this.weekExpenses(this.comparisonWeek);
   }
 
-  get comparisonMonthExpenses(): number {
-    return this.monthExpenses(this.comparisonMonth);
+  get comparisonWeekProfit(): number {
+    return this.comparisonWeekIncome - this.comparisonWeekExpenses;
   }
 
-  get comparisonMonthProfit(): number {
-    return this.comparisonMonthIncome - this.comparisonMonthExpenses;
+  get selectedWeekLedger(): LedgerEntry[] {
+    return this.sortedLedger.filter((entry) => this.isInWeek(entry.date, this.selectedWeek));
   }
 
-  get selectedMonthLedger(): LedgerEntry[] {
-    return this.sortedLedger.filter((entry) => entry.date.startsWith(this.selectedMonth));
+  get currentWeekBars(): { day: string; amount: number; height: number }[] {
+    return this.barsForWeek(this.currentWeek);
   }
 
-  get currentMonthBars(): { day: string; amount: number; height: number }[] {
-    return this.barsForMonth(this.currentMonth);
+  get selectedWeekBars(): { day: string; amount: number; height: number }[] {
+    return this.barsForWeek(this.selectedWeek);
   }
 
-  get selectedMonthBars(): { day: string; amount: number; height: number }[] {
-    return this.barsForMonth(this.selectedMonth);
+  weekLabel(week: string): string {
+    const start = this.localDate(week);
+    const end = this.localDate(this.addDays(week, 6));
+    const startLabel = start.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+    const endLabel = end.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    return `${startLabel} a ${endLabel}`;
   }
 
-  monthLabel(month: string): string {
-    const [year, monthNumber] = month.split('-').map(Number);
-    return new Date(year, monthNumber - 1, 1).toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  get selectedWeekMaintenance(): number {
+    return this.sumMaintenance(this.selectedWeek);
   }
 
-  get selectedMonthMaintenance(): number {
-    return this.sumMaintenance(this.selectedMonth);
+  get selectedWeekFuel(): number {
+    return this.sumFillUps(this.selectedWeek);
   }
 
-  get selectedMonthFuel(): number {
-    return this.sumFillUps(this.selectedMonth);
-  }
-
-  get selectedMonthDiscounts(): number {
-    return this.sumDiscounts(this.selectedMonth);
-  }
-
-  get selectedMonthOtherExpenses(): number {
-    return this.sumLedger(this.selectedMonth, 'Despesa');
+  get selectedWeekOtherExpenses(): number {
+    return this.sumLedger(this.selectedWeek, 'Despesa');
   }
 
   get sortedFillUps(): FillUp[] {
@@ -232,24 +202,34 @@ export class App {
     return [...this.ledger].sort((left, right) => right.date.localeCompare(left.date));
   }
 
-  get selectedMonthWorkDays(): WorkDay[] {
-    return this.workDays.filter((entry) => entry.date.startsWith(this.selectedMonth))
+  get selectedWeekWorkDays(): WorkDay[] {
+    return this.workDays.filter((entry) => this.isInWeek(entry.date, this.selectedWeek))
       .sort((left, right) => right.date.localeCompare(left.date));
   }
 
-  get fuelOptions(): { name: FuelKind; price: number; costPerKm: number; tripCost: number; station: string }[] {
-    const candidates = [
-      { name: 'Gasolina comum' as FuelKind, price: this.compareForm.gasoline, consumption: this.compareForm.consumption },
-      { name: 'Gasolina aditivada' as FuelKind, price: this.compareForm.additive, consumption: this.compareForm.consumption },
-      { name: 'Etanol comum' as FuelKind, price: this.compareForm.ethanol, consumption: this.compareForm.consumption * 0.7 },
-      { name: 'Etanol aditivado' as FuelKind, price: this.compareForm.ethanolAdditive, consumption: this.compareForm.consumption * 0.7 },
-    ];
-    return candidates.map((item) => {
-      const costPerKm = item.price / item.consumption;
-      const tripCost = costPerKm * this.compareForm.distance;
-      const station = this.fillUps.filter((fillUp) => fillUp.fuel === item.name).sort((a, b) => a.price - b.price)[0]?.station ?? 'Informe o preco local';
-      return { name: item.name, price: item.price, costPerKm, tripCost, station };
-    }).sort((left, right) => left.costPerKm - right.costPerKm);
+  get latestFillUp(): FillUp | undefined {
+    return this.fillUps.at(-1);
+  }
+
+  get fuelOptions(): { name: 'Gasolina' | 'Etanol'; distanceMeasured: number; costPerKm: number | null; tripCost: number | null }[] {
+    const options = (['Gasolina', 'Etanol'] as const).map((name) => {
+      const entries = this.fillUps.filter((entry) =>
+        entry.fuel.startsWith(name) && (entry.distanceDriven ?? 0) > 0);
+      const distanceMeasured = entries.reduce((sum, entry) => sum + (entry.distanceDriven ?? 0), 0);
+      const totalPaid = entries.reduce((sum, entry) => sum + entry.total, 0);
+      const costPerKm = distanceMeasured > 0 ? totalPaid / distanceMeasured : null;
+      return {
+        name,
+        distanceMeasured,
+        costPerKm,
+        tripCost: costPerKm === null ? null : costPerKm * this.compareForm.distance,
+      };
+    });
+    return options.sort((left, right) => {
+      if (left.costPerKm === null) return 1;
+      if (right.costPerKm === null) return -1;
+      return left.costPerKm - right.costPerKm;
+    });
   }
 
   setSection(section: Section): void {
@@ -318,28 +298,19 @@ export class App {
     records.splice(index, 1);
     this.persist(storageKey, records);
     this.deleteCandidate = null;
-    this.showNotice('Registro excluído. Os demais registros e meses foram mantidos.');
+    this.showNotice('Registro excluído. Os demais registros foram mantidos.');
   }
 
   addFillUp(): void {
-    const { date, station, fuel, price, totalPaid, discountAmount, discountProvider, odometer, fullTank } = this.fillUpForm;
-    if (!station.trim() || price <= 0 || totalPaid <= 0 || discountAmount < 0 || odometer <= 0) {
-      this.showNotice('Preencha posto, preco por litro, valor pago e quilometragem com valores validos.');
+    const { date, station, fuel, price, totalPaid, distanceDriven } = this.fillUpForm;
+    if (!station.trim() || price <= 0 || totalPaid <= 0 || distanceDriven <= 0) {
+      this.showNotice('Preencha posto, preço, valor pago e distância percorrida com valores válidos.');
       return;
     }
-    if (discountAmount > 0 && !discountProvider.trim()) {
-      this.showNotice('Informe o app ou programa que concedeu o desconto.');
-      return;
-    }
-    if (this.fillUps.some((entry) => entry.odometer >= odometer)) {
-      this.showNotice('A quilometragem deve ser maior que a do abastecimento anterior.');
-      return;
-    }
-    const liters = Math.round(((totalPaid + discountAmount) / price) * 1000) / 1000;
-    this.fillUps.push({ id: Date.now(), date, station: station.trim(), fuel, price, liters, total: totalPaid,
-      discountAmount, ...(discountProvider.trim() ? { discountProvider: discountProvider.trim() } : {}), odometer, fullTank });
+    const liters = Math.round((totalPaid / price) * 1000) / 1000;
+    this.fillUps.push({ id: Date.now(), date, station: station.trim(), fuel, price, liters, total: totalPaid, distanceDriven });
     this.persist('rota-economica-fillups', this.fillUps);
-    this.fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum', price: 0, totalPaid: 0, discountAmount: 0, discountProvider: '', odometer: 0, fullTank: true };
+    this.fillUpForm = { date: this.today, station: '', fuel: 'Gasolina comum', price: 0, totalPaid: 0, distanceDriven: 0 };
     this.showNotice('Abastecimento registrado.');
   }
 
@@ -390,47 +361,69 @@ export class App {
     this.noticeTimer = setTimeout(() => this.notice = '', 3200);
   }
 
-  private sumLedger(month: string, kind: LedgerEntry['kind']): number {
+  private sumLedger(week: string, kind: LedgerEntry['kind']): number {
     return this.ledger
-      .filter((entry) => entry.date.startsWith(month) && entry.kind === kind)
+      .filter((entry) => this.isInWeek(entry.date, week) && entry.kind === kind)
       .reduce((sum, entry) => sum + entry.amount, 0);
   }
 
-  private sumHours(month: string): number {
-    return this.workDays.filter((entry) => entry.date.startsWith(month))
+  private sumHours(week: string): number {
+    return this.workDays.filter((entry) => this.isInWeek(entry.date, week))
       .reduce((sum, entry) => sum + entry.hours, 0);
   }
 
-  private sumFillUps(month: string): number {
-    return this.fillUps.filter((entry) => entry.date.startsWith(month))
+  private sumFillUps(week: string): number {
+    return this.fillUps.filter((entry) => this.isInWeek(entry.date, week))
       .reduce((sum, entry) => sum + entry.total, 0);
   }
 
-  private sumDiscounts(month: string): number {
-    return this.fillUps.filter((entry) => entry.date.startsWith(month))
-      .reduce((sum, entry) => sum + (entry.discountAmount ?? 0), 0);
-  }
-
-  private sumMaintenance(month: string): number {
-    return this.maintenance.filter((entry) => entry.date.startsWith(month))
+  private sumMaintenance(week: string): number {
+    return this.maintenance.filter((entry) => this.isInWeek(entry.date, week))
       .reduce((sum, entry) => sum + entry.amount, 0);
   }
 
-  private monthExpenses(month: string): number {
-    return this.sumLedger(month, 'Despesa') + this.sumFillUps(month) + this.sumMaintenance(month);
+  private weekExpenses(week: string): number {
+    return this.sumLedger(week, 'Despesa') + this.sumFillUps(week) + this.sumMaintenance(week);
   }
 
-  private barsForMonth(month: string): { day: string; amount: number; height: number }[] {
-    const weeks = Array.from({ length: 5 }, (_, index) => ({ day: `Sem ${index + 1}`, amount: 0, height: 0 }));
-    this.ledger.filter((entry) => entry.kind === 'Receita' && entry.date.startsWith(month)).forEach((entry) => {
-      const weekIndex = Math.min(4, Math.floor((Number(entry.date.slice(8, 10)) - 1) / 7));
-      weeks[weekIndex].amount += entry.amount;
+  private barsForWeek(week: string): { day: string; amount: number; height: number }[] {
+    const days = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+      .map((day) => ({ day, amount: 0, height: 0 }));
+    this.ledger.filter((entry) => entry.kind === 'Receita' && this.isInWeek(entry.date, week)).forEach((entry) => {
+      const date = this.localDate(entry.date);
+      const dayIndex = (date.getDay() + 6) % 7;
+      days[dayIndex].amount += entry.amount;
     });
-    const maxAmount = Math.max(...weeks.map((week) => week.amount), 0);
-    return weeks.map((week) => ({
-      ...week,
-      height: maxAmount > 0 ? Math.max(8, Math.round((week.amount / maxAmount) * 100)) : 0,
+    const maxAmount = Math.max(...days.map((day) => day.amount), 0);
+    return days.map((day) => ({
+      ...day,
+      height: maxAmount > 0 ? Math.max(8, Math.round((day.amount / maxAmount) * 100)) : 0,
     }));
+  }
+
+  private isInWeek(date: string, week: string): boolean {
+    return date >= week && date <= this.addDays(week, 6);
+  }
+
+  private weekStart(date: string): string {
+    const localDate = this.localDate(date);
+    localDate.setDate(localDate.getDate() - ((localDate.getDay() + 6) % 7));
+    return this.dateKey(localDate);
+  }
+
+  private addDays(date: string, days: number): string {
+    const result = this.localDate(date);
+    result.setDate(result.getDate() + days);
+    return this.dateKey(result);
+  }
+
+  private localDate(date: string): Date {
+    const [year, month, day] = date.split('-').map(Number);
+    return new Date(year, month - 1, day);
+  }
+
+  private dateKey(date: Date): string {
+    return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
   }
 
   private readRecords<T>(key: string, demoRecords: T): T {
